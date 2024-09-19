@@ -4,7 +4,6 @@ namespace App\Controller;
 
 use App\Service\FileUploader;
 use Psr\Log\LoggerInterface;
-use App\Exception\ValidationException;
 use App\Entity\Book;
 use App\Service\BookService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -38,12 +37,13 @@ class BookController extends AbstractController
     public function create(
         EntityManagerInterface $entityManager, 
         Request $request, 
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        BookService $bookService
     ): JsonResponse 
     {
         try {
             $parameters = json_decode($request->getContent(), true);
-            $this->simpleDataValdiation($parameters);
+            $bookService->simpleDataValdiation($parameters);
 
             $book = $entityManager->getRepository(Book::class)->findBy(['title' => $parameters['title']]);
             if ($book) {
@@ -171,20 +171,5 @@ class BookController extends AbstractController
             'isbn' => $book->getIsbn(),
             'coverPhoto' => $book->getCoverPhoto(),
         ];
-    }
-
-    private function simpleDataValdiation(Array $parameters): void
-    {
-        $errors = [];
-
-        if (!isset($parameters['title'])) { $errors[] = 'title is required'; }
-        if (!isset($parameters['author'])) { $errors[] = 'author is required'; }
-        if (!isset($parameters['publishDate'])) { $errors[] = 'publish date is required'; }
-        if (!isset($parameters['isbn'])) { $errors[] = 'ISBN is required'; }
-        if (!isset($parameters['title'])) { $errors[] = 'Title is required'; }
-
-        if (count($errors) > 0) {
-            throw new ValidationException(json_encode($errors));
-        }
     }
 }
