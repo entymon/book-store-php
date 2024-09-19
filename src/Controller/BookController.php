@@ -6,6 +6,7 @@ use App\Service\FileUploader;
 use Psr\Log\LoggerInterface;
 use App\Exception\ValidationException;
 use App\Entity\Book;
+use App\Service\BookService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,10 +21,12 @@ class BookController extends AbstractController
     {
         $books = $entityManager
             ->getRepository(Book::class)
+            ->limit(20)
+            ->offset(0)
             ->findAll();
 
         $data = [];
-    
+        // http://localhost:8100/images/cat-1.jpg
         foreach ($books as $book) {
            $data[] = $this->shapeResponse($book);
         }
@@ -132,6 +135,7 @@ class BookController extends AbstractController
         EntityManagerInterface $entityManager, 
         FileUploader $fileUploader, 
         Request $request,
+        BookService $bookService,
         int $id
     ): JsonResponse
     {
@@ -144,7 +148,9 @@ class BookController extends AbstractController
         
         if ($coverPhoto) {
             $coverPhotoFileName = $fileUploader->upload($coverPhoto, $id);
-            $book->setCoverPhoto($coverPhotoFileName);
+
+            $fullPath = $bookService->getImagePath($coverPhotoFileName);
+            $book->setCoverPhoto($fullPath);
         }
 
         $entityManager->persist($book);
