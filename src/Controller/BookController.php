@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Service\FileUploader;
+use Psr\Log\LoggerInterface;
 use App\Exception\ValidationException;
 use App\Entity\Book;
 use Doctrine\ORM\EntityManagerInterface;
@@ -12,8 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 class BookController extends AbstractController
-{
-    #[Route('/books', name: 'list_books', methods:['get'])]
+{    
+    #[Route('/books', name: 'list_books', methods:['get'] )]
     public function index(EntityManagerInterface $entityManager): JsonResponse
     {
         $books = $entityManager
@@ -30,7 +32,11 @@ class BookController extends AbstractController
     }
 
     #[Route('/books', name: 'book_create', methods:['post'] )]
-    public function create(EntityManagerInterface $entityManager, Request $request): JsonResponse
+    public function create(
+        EntityManagerInterface $entityManager, 
+        Request $request, 
+        LoggerInterface $logger
+    ): JsonResponse 
     {
         try {
             $parameters = json_decode($request->getContent(), true);
@@ -46,7 +52,6 @@ class BookController extends AbstractController
             $book->setAuthor($parameters['author']);
             $book->setPublishDate(new \DateTime($parameters['publishDate']));
             $book->setIsbn($parameters['isbn']);
-            $book->setCoverPhoto($parameters['coverPhoto']);
     
             if (isset($parameters['description'])) { $book->setDescription($parameters['description']); }
         
@@ -58,6 +63,7 @@ class BookController extends AbstractController
                 
             return $this->json($data);
         } catch (\Exception $ex) {
+            $logger->warning('error while adding new book ' . $ex->getMessage());
             if (get_class($ex) === 'App\Exception\ValidationException') {
                 return $this->json([
                     'status' => Response::HTTP_BAD_REQUEST,
@@ -99,7 +105,6 @@ class BookController extends AbstractController
         if (isset($parameters['description'])) { $book->setDescription($parameters['description']); }
         if (isset($parameters['publishDate'])) { $book->setPublishDate(new \DateTime($parameters['publishDate'])); }
         if (isset($parameters['isbn'])) { $book->setIsbn($parameters['isbn']); }
-        if (isset($parameters['coverPhoto'])) { $book->setCoverPhoto($parameters['coverPhoto']); }
         $entityManager->flush();
     
         $data =  $this->shapeResponse($book);
@@ -120,6 +125,33 @@ class BookController extends AbstractController
         $entityManager->flush();
     
         return $this->json('Deleted a book successfully with id ' . $id);
+    }
+
+    #[Route('/books/{id}/upload', name: 'book_upload_cover_photo', methods:['POST'] )]
+    public function upload(
+        EntityManagerInterface $entityManager, 
+        FileUploader $fileUploader, 
+        Request $request,
+        int $id
+    ): JsonResponse
+    {
+        $book = $entityManager->getRepository(Book::class)->find($id);
+        if (!$book) {
+            return $this->json('No book found for id ' . $id, 404);
+        }
+        
+        $coverPhoto = $request->files->get('url_image');
+        
+        if ($coverPhoto) {
+            $coverPhotoFileName = $fileUploader->upload($coverPhoto, $id);
+            $book->setCoverPhoto($coverPhotoFileName);
+        }
+
+        $entityManager->persist($book);
+        $entityManager->flush();
+
+    
+        return $this->json('Image uploaded with success ' . $id);
     }
 
     private function shapeResponse(Book $book): Array
@@ -143,7 +175,6 @@ class BookController extends AbstractController
         if (!isset($parameters['author'])) { $errors[] = 'author is required'; }
         if (!isset($parameters['publishDate'])) { $errors[] = 'publish date is required'; }
         if (!isset($parameters['isbn'])) { $errors[] = 'ISBN is required'; }
-        if (!isset($parameters['coverPhoto'])) { $errors[] = 'cover photo is required'; }
         if (!isset($parameters['title'])) { $errors[] = 'Title is required'; }
 
         if (count($errors) > 0) {

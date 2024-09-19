@@ -29,7 +29,7 @@ class Book
     #[ORM\Column(length: 30)]
     private ?string $isbn = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $coverPhoto = null;
 
     public function getId(): ?int
