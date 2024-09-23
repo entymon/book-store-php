@@ -67,4 +67,26 @@ class BookRepository extends ServiceEntityRepository
             ->getQuery()
             ->execute();
     }
+
+    public function countBooks()
+    {
+        $qb = $this->createQueryBuilder('b');
+        $qb->select('count(b.id)');
+        return $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function getBooks($limit = null, $offset = null): array
+    {
+        $qb = $this->createQueryBuilder('b')
+            ->orderBy('b.id', 'ASC');
+
+        if (false === is_null($offset))
+            $qb->setFirstResult($offset);
+
+        if (false === is_null($limit))
+            $qb->setMaxResults($limit);
+        
+        return $qb->getQuery()
+            ->getResult();
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Service\FileUploader;
 use Psr\Log\LoggerInterface;
 use App\Entity\Book;
+use App\Repository\BookRepository;
 use App\Service\BookService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,22 +16,27 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class BookController extends AbstractController
 {    
-    #[Route('/books', name: 'list_books', methods:['get'] )]
-    public function index(EntityManagerInterface $entityManager): JsonResponse
-    {
-        $books = $entityManager
-            ->getRepository(Book::class)
-            ->limit(20)
-            ->offset(0)
-            ->findAll();
 
+    const NUMBER_ON_PAGE = 10;
+
+    #[Route('/books/{page}', name: 'list_books', requirements: ['page' => '\d+'], methods:['get'] )]
+    public function index(BookRepository $bookRepository, int $page = 1): JsonResponse
+    {
+        $countBooks = $bookRepository->countBooks();
+        $books = $bookRepository->getBooks(self::NUMBER_ON_PAGE, ($page - 1) * self::NUMBER_ON_PAGE);
         $data = [];
         // http://localhost:8100/images/cat-1.jpg
+
         foreach ($books as $book) {
            $data[] = $this->shapeResponse($book);
         }
     
-        return $this->json($data);
+        return $this->json([
+            'data' => $data,
+            'total' => $countBooks,
+            'page' => $page,
+            'numberOnPage' => self::NUMBER_ON_PAGE
+        ]);
     }
 
     #[Route('/books', name: 'book_create', methods:['post'] )]
