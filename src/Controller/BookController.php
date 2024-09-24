@@ -13,7 +13,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Attribute\MapQueryParameter;
 
 class BookController extends AbstractController
 {    
@@ -39,7 +38,7 @@ class BookController extends AbstractController
             'numberOnPage' => self::NUMBER_ON_PAGE
         ]);
     }
-
+    
     #[Route('/book', name: 'book_create', methods:['post'] )]
     public function create(
         EntityManagerInterface $entityManager, 
@@ -54,7 +53,10 @@ class BookController extends AbstractController
 
             $book = $entityManager->getRepository(Book::class)->findBy(['title' => $parameters['title']]);
             if ($book) {
-                return $this->json('book found for title ' . $parameters['title'], 400);
+                return $this->json([
+                    'status' => Response::HTTP_BAD_REQUEST,
+                    'message' => 'book found for title ' . $parameters['title']
+                ], Response::HTTP_BAD_REQUEST);
             }
     
             $book = new Book();
@@ -69,7 +71,6 @@ class BookController extends AbstractController
             $entityManager->flush();
         
             $data =  $this->shapeResponse($book);
-    
                 
             return $this->json($data);
         } catch (\Exception $ex) {
@@ -84,7 +85,7 @@ class BookController extends AbstractController
         }
     }
   
-    #[Route('/book/{id}', name: 'book_show', requirements: ['page' => '\d+'], methods:['get'] )]
+    #[Route('/book/{id}', name: 'book_show', requirements: ['id' => '\d+'], methods:['get'] )]
     public function show(EntityManagerInterface $entityManager, int $id): JsonResponse
     {
         $book = $entityManager->getRepository(Book::class)->find($id);
@@ -99,7 +100,7 @@ class BookController extends AbstractController
         return $this->json($data);
     }
   
-    #[Route('/book/{id}', name: 'book_update', requirements: ['page' => '\d+'], methods:['put', 'patch'] )]
+    #[Route('/book/{id}', name: 'book_update', requirements: ['id' => '\d+'], methods:['put', 'patch'] )]
     public function update(EntityManagerInterface $entityManager, Request $request, int $id): JsonResponse
     {
         $book = $entityManager->getRepository(Book::class)->find($id);
@@ -122,7 +123,7 @@ class BookController extends AbstractController
         return $this->json($data);
     }
   
-    #[Route('/book/{id}', name: 'book_delete', requirements: ['page' => '\d+'], methods:['delete'] )]
+    #[Route('/book/{id}', name: 'book_delete', requirements: ['id' => '\d+'], methods:['delete'] )]
     public function delete(EntityManagerInterface $entityManager, int $id): JsonResponse
     {
         $book = $entityManager->getRepository(Book::class)->find($id);
@@ -137,24 +138,24 @@ class BookController extends AbstractController
         return $this->json('Deleted a book successfully with id ' . $id);
     }
 
-    #[Route('/book/{id}/upload', name: 'book_upload_cover_photo', methods:['POST'] )]
+    #[Route('/upload/{bookId}', name: 'book_upload_cover_photo', requirements: ['bookId' => '\d+'], methods:['POST'] )]
     public function upload(
         EntityManagerInterface $entityManager, 
         FileUploader $fileUploader, 
         Request $request,
         BookService $bookService,
-        int $id
+        int $bookId
     ): JsonResponse
     {
-        $book = $entityManager->getRepository(Book::class)->find($id);
+        $book = $entityManager->getRepository(Book::class)->find($bookId);
         if (!$book) {
-            return $this->json('No book found for id ' . $id, 404);
+            return $this->json('No book found for id ' . $bookId, 404);
         }
         
         $coverPhoto = $request->files->get('url_image');
         
         if ($coverPhoto) {
-            $coverPhotoFileName = $fileUploader->upload($coverPhoto, $id);
+            $coverPhotoFileName = $fileUploader->upload($coverPhoto, $bookId);
 
             $fullPath = $bookService->getImagePath($coverPhotoFileName);
             $book->setCoverPhoto($fullPath);
@@ -164,10 +165,10 @@ class BookController extends AbstractController
         $entityManager->flush();
 
     
-        return $this->json('Image uploaded with success ' . $id);
+        return $this->json('Image uploaded with success ' . $bookId);
     }
 
-    #[Route('/search/{phrase}', name: 'book_upload_cover_photo', methods:['GET'] )]
+    #[Route('/search/{phrase}', name: 'search_book', methods:['GET'] )]
     public function search(
         BookRepository $bookRepository, string $phrase = ''
     ): JsonResponse
