@@ -5,6 +5,8 @@ namespace App\Repository;
 use App\Entity\Book;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\DBAL\Exception as DBALException;
+use Doctrine\DBAL\ParameterType;
 
 /**
  * @extends ServiceEntityRepository<Book>
@@ -15,31 +17,6 @@ class BookRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Book::class);
     }
-
-    //    /**
-    //     * @return Book[] Returns an array of Book objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('b')
-    //            ->andWhere('b.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('b.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
-
-    //    public function findOneBySomeField($value): ?Book
-    //    {
-    //        return $this->createQueryBuilder('b')
-    //            ->andWhere('b.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
 
     /**
      * @param array $criteria
@@ -87,6 +64,15 @@ class BookRepository extends ServiceEntityRepository
             $qb->setMaxResults($limit);
         
         return $qb->getQuery()
+            ->getResult();
+    }
+    
+    public function searchByAuthorAndTitle($search) {
+      return $this->createQueryBuilder('book')
+            ->andWhere('book.title LIKE :searchTerm OR book.author LIKE :searchTerm')
+            ->setParameter('searchTerm', '%'.$search.'%')
+            ->setMaxResults(10)
+            ->getQuery()
             ->getResult();
     }
 }

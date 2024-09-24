@@ -5,8 +5,11 @@ namespace App\Entity;
 use App\Repository\BookRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\Mapping\Index;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
+#[Index(name: "title_idx", columns: ["title"])]
+#[Index(name: "author_idx", fields: ["author"])]
 class Book
 {
     #[ORM\Id]
