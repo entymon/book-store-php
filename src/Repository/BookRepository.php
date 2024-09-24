@@ -66,8 +66,8 @@ class BookRepository extends ServiceEntityRepository
         return $qb->getQuery()
             ->getResult();
     }
-    
-    public function searchByAuthorAndTitle($search) {
+
+    public function searchByAuthorAndTitle($search): array {
       return $this->createQueryBuilder('book')
             ->andWhere('book.title LIKE :searchTerm OR book.author LIKE :searchTerm')
             ->setParameter('searchTerm', '%'.$search.'%')

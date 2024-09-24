@@ -172,11 +172,14 @@ class BookController extends AbstractController
         BookRepository $bookRepository, string $phrase = ''
     ): JsonResponse
     {
-        $data = $bookRepository->searchByAuthorAndTitle($phrase);
+        $books = $bookRepository->searchByAuthorAndTitle($phrase);
+        $data = [];
 
-        var_dump($data);die;
-    
-        return $this->json('success ');
+        foreach ($books as $book) {
+            $data[] = $this->shapeResponse($book);
+        }
+            
+        return $this->json($data);
     }
 
     private function shapeResponse(Book $book): Array
