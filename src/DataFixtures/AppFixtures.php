@@ -21,10 +21,19 @@ class AppFixtures extends Fixture
         'Maria',
     ];
 
-    public function load(ObjectManager $manager): void
+    public static function getGroups(): array
     {
-        for ($n = 1; $n <= 100; $n++) {
-            for ($i = 1; $i <= 10000; $i++) {
+        return ['group1'];
+    }
+
+    public function load(ObjectManager $manager): void
+    {     
+        for ($n = 0; $n <= 20000; $n++) {
+            if ($n % 1000 === 0) {
+                echo "Start loop: ". $n . "\n";
+            }
+
+            for ($i = 0; $i <= 25; $i++) {
                 $author = $this->authors[rand(0, count($this->authors) - 1)];
                 $date = new \DateTimeImmutable('2000-01-01');
 
@@ -39,8 +48,7 @@ class AppFixtures extends Fixture
             }
 
             $manager->flush();
-            sleep(10);
+            $manager->clear();
         }
-
     }
 }
